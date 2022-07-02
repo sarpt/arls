@@ -1,6 +1,7 @@
 # arls - list archive contents recursively
 
-Crude and quick implementation of a tool to extract and list contents of archives.
+Crude and quick implementation of a tool to extract and list contents of
+archives.
 
 ### execution example
 
@@ -50,11 +51,15 @@ provided/hardcoded in the Dockerfile and there's no need to provide them again.
 
 ### arguments
 
+- `--absolute-paths`: absolute paths of entries instead of default
+  archive-relative paths. `false` by default. Ignored when `--json` is provided
 - `-e, --e` : (list) regex pattern for `grep` and its variants. It's mandatory
   to provide at least one.
 - `-i, --i` : input file. Mandatory, unless unnamed arguments before `--`
   provided. Ignored when unnamed arguments before `--` provided.
 - `--json` : json output. `false` by default.
+- `-L, --L` : long list output - provides extra information (only entry variant
+  atm). `false` by default. Ignored when `--json` is provided
 - `--libarchive`: path to libarchive library. When not provided,
   `/usr/lib/libarchive.so` is used by default.
 - `--libmagic`: path to libmagic library. When not provided,
@@ -63,6 +68,8 @@ provided/hardcoded in the Dockerfile and there's no need to provide them again.
   results. It's expected that socket is being listened on already before
   execution. When not provided, standard output is used by default.
 - `-v` : verbose logging. `false` by default.
+- `-V, --V` : long variant output. `false` by default. Only works with `--L`
+  flag provided. Ignored when `--json` is provided
 
 ### unnamed arguments
 

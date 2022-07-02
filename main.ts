@@ -1,33 +1,43 @@
 import { Args, parse } from "https://deno.land/std@0.120.0/flags/mod.ts";
 import { LibArchive } from "https://raw.githubusercontent.com/sarpt/deno-libarchive/master/mod.ts";
-import { basename, dirname, join } from "https://deno.land/std@0.125.0/path/mod.ts";
+import {
+  basename,
+  dirname,
+  join,
+} from "https://deno.land/std@0.125.0/path/mod.ts";
 
 import { forceArrayArgument } from "./utils.ts";
 import { defaultLibmagicPath, LibMagic } from "./libmagic.ts";
 import {
-EntryVariant,
+  EntryVariant,
   JSONOutput,
   logger,
   output,
   StandardOutput,
   TextOutput,
+  textOutputOptions,
   UnixSocketOutput,
 } from "./output.ts";
 
 type Arguments = {
-  ["--"]: string[]; // arguments to grep after --
+  ["absolute-paths"]?: boolean; // --absolute-paths: output absolute fs paths
   i?: string | string[]; // -i, --i : input file
   json?: boolean; // --json : json output
-  v?: boolean; // -v : verbose logging
-  td?: string; // --td : temporary directory for archives extraction
+  L?: boolean; // --L : long list output
   libmagic?: string; // --libmagic : path to libmagic library
   libarchive?: string; // --libarchive : path to libarchive library
+  td?: string; // --td : temporary directory for archives extraction
   ["unix-socket-path"]?: string; // --unix-socket-path: path to a unix socket file
+  v?: boolean; // -v, --v : verbose logging
+  V?: boolean; // --V : long variant output
 } & Args;
 
 const tempDirPrefix = "argrep_";
 
-const args = parse(Deno.args, { "--": true }) as unknown as Arguments;
+const args = parse(Deno.args, {
+  "--": true,
+  boolean: true,
+}) as unknown as Arguments;
 
 let outLogger: logger;
 const unixSocketPath = args["unix-socket-path"];
@@ -46,9 +56,14 @@ if (unixSocketPath) {
   outLogger = new StandardOutput();
 }
 
+const textOpts: textOutputOptions = {
+  absolutePaths: args["absolute-paths"],
+  longList: args.L,
+  longVariant: args.V,
+};
 const out: output = args.json
   ? new JSONOutput(outLogger)
-  : new TextOutput(outLogger);
+  : new TextOutput(outLogger, textOpts);
 
 const providedRootPaths: string[] = args._.length > 0
   ? args._.map((arg) => `${arg}`)
@@ -110,10 +125,22 @@ for (const rootPath of providedRootPaths) {
       continue;
     }
 
+    const absolutePath = entry.extractedPath.replace(
+      tempDir,
+      dirname(rootPath),
+    );
+    const archivePath = join(
+      basename(rootPath),
+      absolutePath.replace(rootPath, ""),
+    );
     out.entry({
-      variant: entry.isArchive ? EntryVariant.Archive : entry.isDirectory ? EntryVariant.Directory : EntryVariant.RegularFile,
-      archivePath: entry.extractedPath.replace(tempDir, dirname(rootPath)),
-      fullPath: join(rootPath, entry.archivePath)
+      variant: entry.isArchive
+        ? EntryVariant.Archive
+        : entry.isDirectory
+        ? EntryVariant.Directory
+        : EntryVariant.RegularFile,
+      archivePath,
+      absolutePath,
     });
   }
 }

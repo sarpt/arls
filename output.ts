@@ -1,16 +1,16 @@
 import { writeAll } from "https://deno.land/std@0.136.0/streams/mod.ts";
 
 export enum EntryVariant {
-  RegularFile = 'RegularFile',
-  Directory = 'Directory',
-  Archive = 'Archive'
+  RegularFile = "RegularFile",
+  Directory = "Directory",
+  Archive = "Archive",
 }
 
 type entry = {
-  variant: EntryVariant,
-  unpackedPath?: string,
-  archivePath: string,
-  fullPath: string, 
+  variant: EntryVariant;
+  unpackedPath?: string;
+  archivePath: string;
+  absolutePath: string;
 };
 
 export interface logger {
@@ -83,11 +83,48 @@ export class UnixSocketOutput implements logger {
   }
 }
 
+export type textOutputOptions = {
+  absolutePaths?: boolean;
+  columnSeparator?: string;
+  longList?: boolean;
+  longVariant?: boolean;
+};
+
+const defaultOptions: textOutputOptions = {
+  absolutePaths: false,
+  columnSeparator: "  ",
+  longList: false,
+  longVariant: false,
+};
+
 export class TextOutput implements output {
-  constructor(private logger: logger) {}
+  private options: textOutputOptions;
+
+  constructor(
+    private logger: logger,
+    options?: textOutputOptions,
+  ) {
+    this.options = Object.assign(
+      {},
+      defaultOptions,
+      options,
+    );
+  }
 
   entry(entry: entry): void {
-    const resultText = `${entry.variant[0]} ${entry.archivePath}`;
+    const entryLine = [];
+    if (this.options.longList) {
+      entryLine.push(
+        this.options.longVariant ? entry.variant : entry.variant[0],
+      );
+    }
+
+    const entryPath = this.options.absolutePaths
+      ? entry.absolutePath
+      : entry.archivePath;
+    entryLine.push(entryPath);
+
+    const resultText = entryLine.join(this.options.columnSeparator);
     this.logger.log(`${resultText}\n`);
   }
 
